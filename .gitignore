@@ -154,3 +154,8 @@ temp/
 .terraform/
 *.tfstate
 *.tfstate.*
+
+# =========================
+# Temp (File storage)
+# =========================
+temp/

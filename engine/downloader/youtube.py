@@ -15,7 +15,7 @@ class YouTubeDownloader(BaseDownloader):
                 # Merge into mp4 if possible
                 "merge_output_format": "mp4",
                 # Allow yt-dlp to execute YouTube JS extraction
-                "js_runtimes": {"node": "node"},
+                # "js_runtimes": {"node": "node"},
             }
         )
 
