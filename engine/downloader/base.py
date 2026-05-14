@@ -37,13 +37,13 @@ class BaseDownloader:
                 info = ydl.extract_info(url, download=True)
 
                 # Final downloaded file path
-                # file_path = ydl.prepare_filename(info)
-                requested_downloads = info.get("requested_downloads")
+                file_path = ydl.prepare_filename(info)
+                # requested_downloads = info.get("requested_downloads")
 
-                if requested_downloads:
-                    file_path = requested_downloads[0].get("filepath")
-                else:
-                    file_path = ydl.prepare_filename(info)
+                # if requested_downloads:
+                #     file_path = requested_downloads[0].get("filepath")
+                # else:
+                #     file_path = ydl.prepare_filename(info)
 
             return DownloadResult(
                 success=True,

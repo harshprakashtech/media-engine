@@ -11,7 +11,7 @@ class YouTubeDownloader(BaseDownloader):
         opts.update(
             {
                 # Best video + audio available
-                "format": "bv*+ba/best",
+                "format": "bestvideo+bestaudio/best",
                 # Merge into mp4 if possible
                 "merge_output_format": "mp4",
                 # Allow yt-dlp to execute YouTube JS extraction
