@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 from uuid import uuid4
@@ -35,5 +36,9 @@ class VideoNormalizer:
 
         if process.returncode != 0:
             raise Exception(f"FFmpeg normalization failed:\n{process.stderr}")
+
+        # Delete original raw file after successful normalization
+        if os.path.exists(input_path):
+            os.remove(input_path)
 
         return str(output_path)
