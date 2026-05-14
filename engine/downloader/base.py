@@ -3,6 +3,8 @@ import uuid
 
 import yt_dlp
 
+from engine.processor.normalizer import VideoNormalizer
+
 from .schemas import DownloadResult
 
 
@@ -38,6 +40,7 @@ class BaseDownloader:
 
                 # Final downloaded file path
                 file_path = ydl.prepare_filename(info)
+                file_path = VideoNormalizer.normalize(file_path)
                 # requested_downloads = info.get("requested_downloads")
 
                 # if requested_downloads:
