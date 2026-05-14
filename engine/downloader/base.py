@@ -3,11 +3,16 @@ import uuid
 
 import yt_dlp
 
+from config.logger import get_logger
 from engine.processor.normalizer import VideoNormalizer
 
 from .schemas import DownloadResult
 
+# # Initialize logger
+logger = get_logger(__name__)
 
+
+# Base class for all downloaders
 class BaseDownloader:
     platform = "unknown"
 
@@ -32,21 +37,30 @@ class BaseDownloader:
     # Download video
     def download(self, url: str) -> DownloadResult:
         try:
+            logger.info(f"[{self.platform}] Starting download process for {url}")
+
             ydl_opts = self.get_ydl_opts()
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                logger.info(f"[{self.platform}] Extracting video information")
+
                 # Download + extract metadata
                 info = ydl.extract_info(url, download=True)
 
                 # Final downloaded file path
                 file_path = ydl.prepare_filename(info)
-                file_path = VideoNormalizer.normalize(file_path)
-                # requested_downloads = info.get("requested_downloads")
+                logger.info(
+                    f"[{self.platform}] Video downloaded to {file_path}, starting normalization"
+                )
 
-                # if requested_downloads:
-                #     file_path = requested_downloads[0].get("filepath")
-                # else:
-                #     file_path = ydl.prepare_filename(info)
+                file_path = VideoNormalizer.normalize(file_path)
+                logger.info(
+                    f"[{self.platform}] Normalization complete. Final file: {file_path}"
+                )
+
+            logger.info(
+                f"[{self.platform}] Successfully downloaded and processed {url}"
+            )
 
             return DownloadResult(
                 success=True,
@@ -59,5 +73,7 @@ class BaseDownloader:
             )
 
         except Exception as e:
+            logger.error(f"[{self.platform}] Download failed: {str(e)}")
+
             # Standardized failure response
             return DownloadResult(success=False, platform=self.platform, error=str(e))
