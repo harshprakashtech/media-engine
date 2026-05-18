@@ -4,6 +4,7 @@ import uuid
 import yt_dlp
 
 from config.logger import get_logger
+from engine.processor.inspector import VideoInspector
 from engine.processor.normalizer import VideoNormalizer
 
 from .schemas import DownloadResult
@@ -47,16 +48,11 @@ class BaseDownloader:
                 # Download + extract metadata
                 info = ydl.extract_info(url, download=True)
 
-                # Final downloaded file path
+                # Final downloaded file path & normalized
                 file_path = ydl.prepare_filename(info)
-                logger.info(
-                    f"[{self.platform}] Video downloaded to {file_path}, starting normalization"
-                )
-
                 file_path = VideoNormalizer.normalize(file_path)
-                logger.info(
-                    f"[{self.platform}] Normalization complete. Final file: {file_path}"
-                )
+
+                metadata = VideoInspector.inspect(file_path)
 
             logger.info(
                 f"[{self.platform}] Successfully downloaded and processed {url}"
@@ -70,6 +66,7 @@ class BaseDownloader:
                 thumbnail=info.get("thumbnail"),
                 uploader=info.get("uploader"),
                 file_path=file_path,
+                metadata=metadata,
             )
 
         except Exception as e:

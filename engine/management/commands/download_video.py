@@ -7,7 +7,7 @@ from engine.downloader.manager import DownloadManager
 logger = get_logger("download_video")
 
 
-# Command class to download video
+# Base command for downloading video
 class Command(BaseCommand):
     help = "Download video from supported platforms"
 
