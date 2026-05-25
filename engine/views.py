@@ -1,68 +1,8 @@
-# import json
-# import os
-
-# from django.http import FileResponse, JsonResponse
-# from django.utils.decorators import method_decorator
-# from django.views import View
-# from django.views.decorators.csrf import csrf_exempt
-
-# from config.logger import get_logger
-# from engine.downloader.manager import DownloadManager
-
-# logger = get_logger(__name__)
-
-
-# # Download video from platforms
-# @method_decorator(csrf_exempt, name="dispatch")
-# class DownloadVideoView(View):
-#     def post(self, request, *args, **kwargs):
-#         try:
-#             data = json.loads(request.body)
-#             url = data.get("url")
-#         except json.JSONDecodeError:
-#             return JsonResponse({"error": "Invalid JSON payload"}, status=400)
-
-#         # Validate URL
-#         if not url:
-#             return JsonResponse(
-#                 {"error": "URL is required in the request body"}, status=400
-#             )
-
-#         logger.info(f"API download request received for URL: {url}")
-
-#         # Start download
-#         result = DownloadManager.download(url)
-
-#         # Return file
-#         if result.success and result.file_path and os.path.exists(result.file_path):
-#             logger.info(f"API download successful. Returning file: {result.file_path}")
-#             try:
-#                 # FileResponse handles streaming and safely closing the file
-#                 response = FileResponse(
-#                     open(result.file_path, "rb"),
-#                     as_attachment=True,
-#                     filename=os.path.basename(result.file_path),
-#                     content_type="video/mp4",
-#                 )
-
-#                 return response
-
-#             except Exception as e:
-#                 logger.error(f"Error serving file {result.file_path}: {str(e)}")
-#                 return JsonResponse(
-#                     {"error": "Failed to serve the downloaded file"}, status=500
-#                 )
-#         else:
-#             error_msg = result.error or "Download failed for unknown reasons"
-#             logger.error(f"API download failed. Error: {error_msg}")
-#             return JsonResponse({"error": error_msg}, status=400)
-
-
 import json
 import os
 import threading
 
-from django.http import FileResponse, JsonResponse
+from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -70,23 +10,42 @@ from django.views.decorators.csrf import csrf_exempt
 from config.logger import get_logger
 from engine.downloader.manager import DownloadManager
 from engine.models import DownloadJob
+from engine.storage.cloudinary import CloudinaryStorage
 
 logger = get_logger(__name__)
 
 
-def process_job(job_id):
+# Process job in the background (separate thread)
+def process_job(job_id: str):
     job = DownloadJob.objects.get(id=job_id)
     job.status = "processing"
     job.save()
 
     try:
         result = DownloadManager.download(job.url)
+
         if result.success:
+            # Upload to Cloudinary
+            cloud = CloudinaryStorage.upload(result.file_path, result.platform)
+
+            # Delete local temp file after upload
+            if os.path.exists(result.file_path):
+                os.remove(result.file_path)
+                logger.info(f"Deleted local file: {result.file_path}")
+
             job.status = "done"
-            job.file_path = result.file_path
+            job.cloud_url = cloud["url"]
+            job.platform = result.platform
+            job.title = result.title
+            job.duration = result.duration
+            job.thumbnail = result.thumbnail
+            job.uploader = result.uploader
+            job.file_size = cloud["file_size"]
+
         else:
             job.status = "failed"
             job.error = result.error or "Unknown error"
+
     except Exception as e:
         job.status = "failed"
         job.error = str(e)
@@ -94,9 +53,12 @@ def process_job(job_id):
     job.save()
 
 
+# Download video API
+# api/v1/engine/download
 @method_decorator(csrf_exempt, name="dispatch")
 class DownloadVideoView(View):
     def post(self, request, *args, **kwargs):
+        # Parse request body
         try:
             data = json.loads(request.body)
             url = data.get("url")
@@ -108,10 +70,10 @@ class DownloadVideoView(View):
 
         logger.info(f"API download request received for URL: {url}")
 
-        # Create job and return immediately
+        # Create job record immediately
         job = DownloadJob.objects.create(url=url)
 
-        # Process in background thread
+        # Spin off background thread — response returns instantly
         thread = threading.Thread(target=process_job, args=(str(job.id),))
         thread.daemon = True
         thread.start()
@@ -119,6 +81,8 @@ class DownloadVideoView(View):
         return JsonResponse({"job_id": str(job.id), "status": "pending"}, status=202)
 
 
+# Get job status API
+# api/v1/engine/download/{job_id}
 @method_decorator(csrf_exempt, name="dispatch")
 class JobStatusView(View):
     def get(self, request, job_id, *args, **kwargs):
@@ -127,16 +91,26 @@ class JobStatusView(View):
         except DownloadJob.DoesNotExist:
             return JsonResponse({"error": "Job not found"}, status=404)
 
+        # Job completed — return metadata and cloud URL
         if job.status == "done":
-            if not os.path.exists(job.file_path):
-                return JsonResponse({"error": "File expired or missing"}, status=410)
-            return FileResponse(
-                open(job.file_path, "rb"),
-                as_attachment=True,
-                filename=os.path.basename(job.file_path),
-                content_type="video/mp4",
+            return JsonResponse(
+                {
+                    "status": "done",
+                    "url": job.cloud_url,
+                    "platform": job.platform,
+                    "title": job.title,
+                    "duration": job.duration,
+                    "thumbnail": job.thumbnail,
+                    "uploader": job.uploader,
+                    "file_size": job.file_size,
+                }
             )
 
+        # Still processing or failed
         return JsonResponse(
-            {"job_id": str(job.id), "status": job.status, "error": job.error}
+            {
+                "job_id": str(job.id),
+                "status": job.status,
+                "error": job.error,
+            }
         )
