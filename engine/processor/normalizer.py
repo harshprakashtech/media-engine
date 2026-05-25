@@ -27,9 +27,16 @@ class VideoNormalizer:
             # Video codec -> H264
             "-c:v",
             "libx264",
+            "-preset",
+            "ultrafast",
+            # Video quality
+            "-crf",
+            "28",
             # Audio codec -> AAC
             "-c:a",
             "aac",
+            "-b:a",
+            "128k",
             # Move MP4 header to the start for HTTP streaming
             "-movflags",
             "+faststart",
