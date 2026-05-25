@@ -39,7 +39,7 @@ class YouTubeDownloader(BaseDownloader):
                 "merge_output_format": "mp4",
                 "extractor_args": {"youtube": {"player_client": ["web"]}},
                 "js_runtimes": {"node": {}},
-                "remote_components": {"ejs": "github"},
+                "remote_components": {"ejs:github"},
                 "extractor_retries": 5,
                 "fragment_retries": 5,
                 "file_access_retries": 5,
