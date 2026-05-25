@@ -12,3 +12,4 @@ class DownloadResult:
     thumbnail: Optional[str] = None
     uploader: Optional[str] = None
     error: Optional[str] = None
+    metadata: Optional[dict] = None
