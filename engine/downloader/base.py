@@ -19,7 +19,9 @@ class BaseDownloader:
 
     # Get download output path
     def get_output_path(self):
-        folder = f"temp/{self.platform}"
+        import tempfile
+
+        folder = os.path.join(tempfile.gettempdir(), "media-engine", self.platform)
 
         # Create folder if it doesn't exist
         os.makedirs(folder, exist_ok=True)
