@@ -24,7 +24,6 @@
 #         )
 
 #         return opts
-
 from .base import BaseDownloader
 
 
@@ -36,24 +35,17 @@ class YouTubeDownloader(BaseDownloader):
 
         opts.update(
             {
-                # Format fallback chain
-                "format": ("bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"),
-                # Merge final output
+                "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
                 "merge_output_format": "mp4",
-                # IMPORTANT:
-                # use WEB client for cookies
                 "extractor_args": {"youtube": {"player_client": ["web"]}},
-                # Enable Node JS runtime
                 "js_runtimes": {"node": {}},
-                # Stability
+                "remote_components": {"ejs": "github"},
                 "extractor_retries": 5,
                 "fragment_retries": 5,
                 "file_access_retries": 5,
-                # Small delays
                 "sleep_interval_requests": 1,
                 "sleep_interval": 1,
                 "max_sleep_interval": 5,
-                # Verbose logs
                 "verbose": True,
             }
         )
